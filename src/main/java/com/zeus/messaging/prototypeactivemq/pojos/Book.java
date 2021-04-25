@@ -1,8 +1,14 @@
 package com.zeus.messaging.prototypeactivemq.pojos;
 
-public class Book {
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-    public Book(String bookId, String title) {
+import java.io.Serializable;
+
+public class Book implements Serializable {
+
+    @JsonCreator
+    public Book(@JsonProperty("bookId") String bookId, @JsonProperty("title")String title) {
         this.bookId = bookId;
         this.title = title;
     }
@@ -17,4 +23,14 @@ public class Book {
     public String getTitle() {
         return title;
     }
+
+    @Override
+    public String toString() {
+        return "Book{" +
+                "bookId='" + bookId + '\'' +
+                ", title='" + title + '\'' +
+                '}';
+    }
+
+
 }

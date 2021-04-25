@@ -17,14 +17,6 @@ import javax.jms.ConnectionFactory;
 @Configuration
 public class WebConfig {
 
-    @Value("${active.broker-url}")
-    private String brokerUrl;
-
-    @Value("${activemq.user}")
-    private String activemqUser;
-
-    @Value("${activemq.password}")
-    private String activemqPassword;
 
     @Bean
     public ActiveMQQueue queue(){
