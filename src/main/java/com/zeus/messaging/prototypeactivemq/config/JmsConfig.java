@@ -2,6 +2,7 @@ package com.zeus.messaging.prototypeactivemq.config;
 
 import com.zeus.messaging.prototypeactivemq.listener.BookOrderProcessingMessageListener;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,22 +11,28 @@ import org.springframework.jms.annotation.JmsListenerConfigurer;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.config.JmsListenerEndpointRegistrar;
 import org.springframework.jms.config.SimpleJmsListenerEndpoint;
+import org.springframework.jms.connection.SingleConnectionFactory;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
 
+import javax.jms.ConnectionFactory;
+
 @EnableJms
 @Configuration
-public class JmsConfig implements JmsListenerConfigurer {
+public class JmsConfig { //implements JmsListenerConfigurer {
 
-    @Value("${active.broker-url}")
+//    @Autowired
+//    private ConnectionFactory connectionFactory;
+
+    @Value("${spring.activemq.broker-url}")
     private String brokerUrl;
 
-    @Value("${activemq.user}")
-    private String activemqUser;
+    @Value("${spring.activemq.user}")
+    private String user;
 
-    @Value("${activemq.password}")
-    private String activemqPassword;
+    @Value("${spring.activemq.password}")
+    private String password;
 
     @Bean
     public MessageConverter jacksonJmsMessageConverter(){
@@ -35,11 +42,20 @@ public class JmsConfig implements JmsListenerConfigurer {
         return converter;
     }
 
+
     @Bean
-    public ActiveMQConnectionFactory connectionFactory(){
-        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(activemqUser, activemqPassword, brokerUrl);
-        return factory;
+    public SingleConnectionFactory connectionFactory(){
+
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(user, password, brokerUrl);
+
+        SingleConnectionFactory singleConnectionFactory = new SingleConnectionFactory(factory);
+        singleConnectionFactory.setReconnectOnException(true);
+        singleConnectionFactory.setClientId("zeus-web");
+
+        return singleConnectionFactory;
     }
+
+
 
     @Bean
     public DefaultJmsListenerContainerFactory jmsListenerContainerFactory(){
@@ -50,6 +66,7 @@ public class JmsConfig implements JmsListenerConfigurer {
 
     }
 
+    /**
     @Bean
     public BookOrderProcessingMessageListener jmsMessageListener(){
         return new BookOrderProcessingMessageListener();
@@ -65,5 +82,5 @@ public class JmsConfig implements JmsListenerConfigurer {
         endpoint.setSubscription("my-subscription");
         registrar.registerEndpoint(endpoint, jmsListenerContainerFactory());
         registrar.setContainerFactory(jmsListenerContainerFactory());
-    }
+    } */
 }
