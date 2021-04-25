@@ -1,11 +1,10 @@
 package com.zeus.messaging.prototypeactivemq.resource;
 
+import com.zeus.messaging.prototypeactivemq.pojos.BookOrder;
+import com.zeus.messaging.prototypeactivemq.service.jms.BookStoreOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.jms.Queue;
 
@@ -17,6 +16,9 @@ public class ProducerResource {
     JmsTemplate jmsTemplate;
 
     @Autowired
+    BookStoreOrderService bookStoreOrderService;
+
+    @Autowired
     Queue queue;
 
     @GetMapping("/{message}")
@@ -25,5 +27,13 @@ public class ProducerResource {
         jmsTemplate.convertAndSend(queue, message);
 
         return "Publish Successfully";
+    }
+
+    @GetMapping("/order")
+    public String publishOrderBook(@RequestBody BookOrder bookOrder) {
+
+        bookStoreOrderService.send(bookOrder);
+
+        return "Publish Order Successfully";
     }
 }
