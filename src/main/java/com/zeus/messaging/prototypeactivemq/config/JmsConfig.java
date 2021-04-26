@@ -2,6 +2,8 @@ package com.zeus.messaging.prototypeactivemq.config;
 
 import com.zeus.messaging.prototypeactivemq.listener.BookOrderProcessingMessageListener;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -11,19 +13,24 @@ import org.springframework.jms.annotation.JmsListenerConfigurer;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.config.JmsListenerEndpointRegistrar;
 import org.springframework.jms.config.SimpleJmsListenerEndpoint;
+import org.springframework.jms.connection.CachingConnectionFactory;
+import org.springframework.jms.connection.JmsTransactionManager;
 import org.springframework.jms.connection.SingleConnectionFactory;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.jms.ConnectionFactory;
 
+@EnableTransactionManagement
 @EnableJms
 @Configuration
-public class JmsConfig { //implements JmsListenerConfigurer {
+public class JmsConfig {
 
-//    @Autowired
-//    private ConnectionFactory connectionFactory;
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmsConfig.class);
 
     @Value("${spring.activemq.broker-url}")
     private String brokerUrl;
@@ -44,15 +51,14 @@ public class JmsConfig { //implements JmsListenerConfigurer {
 
 
     @Bean
-    public SingleConnectionFactory connectionFactory(){
+    public CachingConnectionFactory connectionFactory(){
 
-        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(user, password, brokerUrl);
-
-        SingleConnectionFactory singleConnectionFactory = new SingleConnectionFactory(factory);
-        singleConnectionFactory.setReconnectOnException(true);
-        singleConnectionFactory.setClientId("zeus-web");
-
-        return singleConnectionFactory;
+        CachingConnectionFactory factory = new CachingConnectionFactory(
+                new ActiveMQConnectionFactory(user, password, brokerUrl)
+        );
+        factory.setClientId("zeus-web");
+        factory.setSessionCacheSize(100);
+        return factory;
     }
 
 
@@ -62,25 +68,26 @@ public class JmsConfig { //implements JmsListenerConfigurer {
         DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory());
         factory.setMessageConverter(jacksonJmsMessageConverter());
+        factory.setTransactionManager(jmsPlatformTransactionManager());
+        factory.setErrorHandler(t -> {
+            LOGGER.info("Handling error in listening for messages, error: " + t.getMessage());
+        });
         return factory;
 
     }
 
-    /**
     @Bean
-    public BookOrderProcessingMessageListener jmsMessageListener(){
-        return new BookOrderProcessingMessageListener();
+    public PlatformTransactionManager jmsPlatformTransactionManager(){
+        return new JmsTransactionManager(connectionFactory());
     }
 
-    @Override
-    public void configureJmsListeners(JmsListenerEndpointRegistrar registrar) {
-        SimpleJmsListenerEndpoint endpoint = new SimpleJmsListenerEndpoint();
-        endpoint.setMessageListener(jmsMessageListener());
-        endpoint.setDestination("book.order.processed.queue");
-        endpoint.setId("book-order-processed-queue");
-        endpoint.setConcurrency("1");
-        endpoint.setSubscription("my-subscription");
-        registrar.registerEndpoint(endpoint, jmsListenerContainerFactory());
-        registrar.setContainerFactory(jmsListenerContainerFactory());
-    } */
+    @Bean
+    public JmsTemplate jmsTemplate(){
+        JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory());
+        jmsTemplate.setMessageConverter(jacksonJmsMessageConverter());
+        jmsTemplate.setDeliveryPersistent(true);
+        jmsTemplate.setSessionTransacted(true);
+        return jmsTemplate;
+
+    }
 }
